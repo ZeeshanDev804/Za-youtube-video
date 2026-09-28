@@ -21,28 +21,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and eSpeak
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng
 
       - name: Verify system
         run: |
-          echo "===== NODE ====="
           node --version
-
-          echo "===== NPM ====="
           npm --version
-
-          echo "===== FFMPEG ====="
           ffmpeg -version
-
-          echo "===== FFPROBE ====="
           ffprobe -version
-
-          echo "===== ESPEAK ====="
           espeak-ng --version
 
       - name: Install dependencies
@@ -77,7 +67,7 @@ jobs:
           mkdir -p test_artifacts
           mkdir -p output_artifacts
 
-      - name: Test FFmpeg rendering
+      - name: Test FFmpeg
         run: |
           ffmpeg -y \
             -f lavfi \
@@ -134,17 +124,9 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           OUTPUT_DIR: output_artifacts
         run: |
-          echo "=========================================="
-          echo "STARTING PRODUCTION TEST"
-          echo "=========================================="
-
           node src/orchestrator.mjs \
             "Never Give Up" \
             --count=1
-
-          echo "=========================================="
-          echo "PRODUCTION TEST FINISHED"
-          echo "=========================================="
 
       - name: Find generated videos
         run: |
@@ -171,9 +153,6 @@ jobs:
             echo "RED: Production MP4 was NOT generated."
             exit 1
           fi
-
-          echo "Production video:"
-          echo "$MP4"
 
           WIDTH=$(ffprobe \
             -v error \
@@ -205,22 +184,20 @@ jobs:
           echo "Width: $WIDTH"
           echo "Height: $HEIGHT"
           echo "Duration: $DURATION"
-          echo "Video codec: $CODEC"
+          echo "Codec: $CODEC"
 
           test "$WIDTH" = "1080"
           test "$HEIGHT" = "1920"
           test "$CODEC" = "h264"
 
-          awk \
-            -v duration="$DURATION" \
-            'BEGIN {
-              if (duration < 20 || duration > 59) {
-                print "RED: Duration outside 20-59 seconds."
-                exit 1
-              }
+          awk -v duration="$DURATION" 'BEGIN {
+            if (duration < 20 || duration > 59) {
+              print "RED: Duration outside 20-59 seconds."
+              exit 1
+            }
 
-              print "GREEN: Duration is inside 20-59 seconds."
-            }'
+            print "GREEN: Duration is inside 20-59 seconds."
+          }'
 
       - name: Upload test artifacts
         if: always()
