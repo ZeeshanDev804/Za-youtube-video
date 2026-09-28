@@ -4,31 +4,112 @@ import { fileURLToPath } from "url";
 
 import config from "./config/index.mjs";
 
-import { processScriptInput } from "./modules/scriptInput.mjs";
-import { createCreativePlan } from "./modules/creativeDirector.mjs";
-import { evaluateStoryQuality } from "./modules/storyQuality.mjs";
-import { createScenes } from "./modules/sceneDirector.mjs";
-import { createCharacterBible } from "./modules/characterBible.mjs";
-import { checkSceneContinuity } from "./modules/sceneContinuity.mjs";
-import { createPrompts } from "./modules/promptDirector.mjs";
-import { planMedia } from "./modules/mediaPlanner.mjs";
+import {
+  parseScriptInput,
+  createVideoRequests
+} from "./modules/scriptInput.mjs";
 
-import { generateVideo } from "./modules/videoProvider.mjs";
-import { generateVoice } from "./modules/voiceEngine.mjs";
+import {
+  chooseStoryFormat,
+  buildCreativeBrief,
+  validateCreativeBrief
+} from "./modules/creativeDirector.mjs";
 
-import { mixAudio } from "./modules/audioMixer.mjs";
-import { renderCaptions } from "./modules/captionRenderer.mjs";
-import { renderScenes } from "./modules/sceneRenderer.mjs";
-import { renderFinalVideo } from "./modules/finalRenderer.mjs";
+import {
+  evaluateStory,
+  assertStoryQuality
+} from "./modules/storyQuality.mjs";
 
-import { runProductionQA } from "./modules/productionQA.mjs";
-import { checkOriginality } from "./modules/originalityGuard.mjs";
-import { checkSafety } from "./modules/safetyGate.mjs";
-import { requestApproval } from "./modules/approvalGate.mjs";
+import {
+  generateStory
+} from "./modules/storyDirector.mjs";
 
-import { createPipelineReport } from "./modules/pipelineReport.mjs";
-import { saveDuplicateHistory } from "./modules/duplicateHistory.mjs";
-import { createPublishMetadata } from "./modules/publishMetadata.mjs";
+import {
+  buildScenes,
+  normalizeScenePlan,
+  validateSceneContinuity
+} from "./modules/sceneDirector.mjs";
+
+import {
+  createCharacterBible,
+  applyCharacterContinuity,
+  validateCharacterBible
+} from "./modules/characterBible.mjs";
+
+import {
+  createContinuityState,
+  applySceneContinuity,
+  advanceContinuity
+} from "./modules/sceneContinuity.mjs";
+
+import {
+  buildVisualPrompt,
+  buildScenePromptPack
+} from "./modules/promptDirector.mjs";
+
+import {
+  buildMediaPlan,
+  validateMediaPlan
+} from "./modules/mediaPlanner.mjs";
+
+import {
+  getVideoProvider,
+  validateVideoProvider,
+  generateSceneVideo
+} from "./modules/videoProvider.mjs";
+
+import {
+  generateVoiceover,
+  validateVoiceDuration
+} from "./modules/voiceEngine.mjs";
+
+import {
+  mixAudio
+} from "./modules/audioMixer.mjs";
+
+import {
+  buildCaptionCues,
+  createASS,
+  renderCaptions
+} from "./modules/captionRenderer.mjs";
+
+import {
+  renderSceneBatch
+} from "./modules/sceneRenderer.mjs";
+
+import {
+  renderFinalVideo
+} from "./modules/finalRenderer.mjs";
+
+import {
+  runProductionQA
+} from "./modules/productionQA.mjs";
+
+import {
+  createContentFingerprint,
+  checkDuplicateContent
+} from "./modules/originalityGuard.mjs";
+
+import {
+  evaluateVideoSafety
+} from "./modules/safetyGate.mjs";
+
+import {
+  evaluateApproval
+} from "./modules/approvalGate.mjs";
+
+import {
+  createPipelineReport
+} from "./modules/pipelineReport.mjs";
+
+import {
+  saveDuplicateHistory
+} from "./modules/duplicateHistory.mjs";
+
+import {
+  buildPublishPackage,
+  validatePublishPackage
+} from "./modules/publishMetadata.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,19 +118,32 @@ const OUTPUT_DIR =
   process.env.OUTPUT_DIR ||
   path.join(__dirname, "..", "output_artifacts");
 
-fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+fs.mkdirSync(OUTPUT_DIR, {
+  recursive: true
+});
 
 function getArguments() {
   const args = process.argv.slice(2);
 
-  const countArg = args.find((arg) => arg.startsWith("--count="));
+  const countArg = args.find((arg) =>
+    arg.startsWith("--count=")
+  );
 
   const count = countArg
-    ? Math.max(1, Number.parseInt(countArg.split("=")[1], 10) || 1)
+    ? Math.max(
+        1,
+        Number.parseInt(
+          countArg.split("=")[1],
+          10
+        ) || 1
+      )
     : 1;
 
   const topic = args
-    .filter((arg) => !arg.startsWith("--"))
+    .filter(
+      (arg) =>
+        !arg.startsWith("--")
+    )
     .join(" ")
     .trim();
 
@@ -60,10 +154,29 @@ function getArguments() {
 }
 
 function getTimestamp() {
-  return new Date().toISOString().replace(/[:.]/g, "-");
+  return new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-");
 }
 
-async function runOneVideo({ topic, index }) {
+function getVideoPath(result) {
+  if (typeof result === "string") {
+    return result;
+  }
+
+  return (
+    result?.outputPath ||
+    result?.videoPath ||
+    result?.path ||
+    result?.filePath ||
+    null
+  );
+}
+
+async function runOneVideo({
+  topic,
+  index
+}) {
   console.log("");
   console.log("======================================");
   console.log(`STARTING VIDEO ${index}`);
@@ -77,268 +190,528 @@ async function runOneVideo({ topic, index }) {
     audience: "UK-US-Europe",
     targetDuration: 40,
     format: "youtube-shorts",
-    width: 1080,
-    height: 1920
+    width:
+      config?.videoConfig?.width ||
+      1080,
+    height:
+      config?.videoConfig?.height ||
+      1920,
+    minDuration:
+      config?.videoConfig?.minDuration ||
+      20,
+    maxDuration:
+      config?.videoConfig?.maxDuration ||
+      59,
+    fps:
+      config?.videoConfig?.fps ||
+      30
   };
 
   console.log("[1/20] Script input...");
 
-  const scriptInput = await processScriptInput({
-    topic,
-    project
-  });
+  const parsedInput =
+    await parseScriptInput({
+      topic,
+      project
+    });
+
+  const requests =
+    createVideoRequests({
+      topic,
+      scriptInput: parsedInput,
+      count: 1
+    });
+
+  const scriptInput =
+    Array.isArray(requests) &&
+    requests.length > 0
+      ? requests[0]
+      : parsedInput;
 
   console.log("[2/20] Creative director...");
 
-  const creativePlan = await createCreativePlan({
-    project,
-    scriptInput
-  });
+  const storyFormat =
+    chooseStoryFormat({
+      topic,
+      project,
+      scriptInput
+    });
 
-  console.log("[3/20] Story quality...");
+  const creativeBrief =
+    buildCreativeBrief({
+      project,
+      topic,
+      scriptInput,
+      storyFormat
+    });
 
-  const storyQuality = await evaluateStoryQuality({
-    project,
-    creativePlan
-  });
+  const creativeValidation =
+    validateCreativeBrief(
+      creativeBrief
+    );
 
-  if (storyQuality?.approved === false) {
+  if (
+    creativeValidation === false
+  ) {
     throw new Error(
-      `Story quality rejected: ${
-        storyQuality.reason || "quality requirements not met"
-      }`
+      "Creative brief validation failed."
     );
   }
 
-  console.log("[4/20] Scene director...");
+  console.log("[3/20] Story director...");
 
-  const scenes = await createScenes({
-    project,
-    creativePlan,
+  const story =
+    await generateStory(
+      topic,
+      {
+        userScript:
+          scriptInput?.script ||
+          scriptInput?.text ||
+          "",
+        project,
+        creativeBrief
+      }
+    );
+
+  console.log("[4/20] Story quality...");
+
+  const storyQuality =
+    evaluateStory(story);
+
+  assertStoryQuality(
     storyQuality
-  });
-
-  console.log("[5/20] Character bible...");
-
-  const characterBible = await createCharacterBible({
-    project,
-    scenes,
-    creativePlan
-  });
-
-  console.log("[6/20] Scene continuity...");
-
-  const continuity = await checkSceneContinuity({
-    project,
-    scenes,
-    characterBible
-  });
-
-  if (continuity?.approved === false) {
-    throw new Error(
-      `Scene continuity rejected: ${
-        continuity.reason || "continuity check failed"
-      }`
-    );
-  }
-
-  console.log("[7/20] Prompt director...");
-
-  const prompts = await createPrompts({
-    project,
-    scenes,
-    characterBible,
-    continuity
-  });
-
-  console.log("[8/20] Media planner...");
-
-  const mediaPlan = await planMedia({
-    project,
-    scenes,
-    prompts,
-    characterBible
-  });
-
-  console.log("[9/20] Video provider...");
-
-  const videoAssets = await generateVideo({
-    project,
-    scenes,
-    prompts,
-    mediaPlan,
-    characterBible
-  });
-
-  console.log("[10/20] Voice engine...");
-
-  const voice = await generateVoice({
-    project,
-    scriptInput,
-    outputDir: OUTPUT_DIR
-  });
-
-  console.log("[11/20] Scene renderer...");
-
-  const sceneRender = await renderScenes({
-    project,
-    scenes,
-    videoAssets,
-    outputDir: OUTPUT_DIR
-  });
-
-  console.log("[12/20] Caption renderer...");
-
-  const captions = await renderCaptions({
-    project,
-    scriptInput,
-    scenes,
-    outputDir: OUTPUT_DIR
-  });
-
-  console.log("[13/20] Audio mixer...");
-
-  const mixedAudio = await mixAudio({
-    project,
-    voice,
-    outputDir: OUTPUT_DIR
-  });
-
-  console.log("[14/20] Final renderer...");
-
-  const finalPath = path.join(
-    OUTPUT_DIR,
-    `short-${index}-${getTimestamp()}.mp4`
   );
 
-  const renderedVideo = await renderFinalVideo({
-    project,
-    scenes,
-    sceneRender,
-    mixedAudio,
-    captions,
-    outputPath: finalPath
-  });
+  console.log("[5/20] Scene director...");
 
-  console.log("[15/20] Production QA...");
+  const rawScenes =
+    await buildScenes(
+      story
+    );
 
-  const qa = await runProductionQA({
-    project,
-    videoPath: renderedVideo || finalPath
-  });
+  const scenes =
+    normalizeScenePlan(
+      rawScenes
+    );
 
-  if (qa?.approved === false) {
+  const sceneValidation =
+    validateSceneContinuity(
+      scenes
+    );
+
+  if (
+    sceneValidation === false
+  ) {
     throw new Error(
-      `Production QA rejected: ${
-        qa.reason || "video quality requirements not met"
+      "Scene continuity validation failed."
+    );
+  }
+
+  console.log("[6/20] Character bible...");
+
+  const characterBible =
+    createCharacterBible({
+      story,
+      scenes,
+      project
+    });
+
+  validateCharacterBible(
+    characterBible
+  );
+
+  console.log("[7/20] Scene continuity...");
+
+  let continuity =
+    createContinuityState({
+      project,
+      characterBible
+    });
+
+  const continuousScenes =
+    scenes.map(
+      (scene) => {
+        const result =
+          applySceneContinuity(
+            scene,
+            continuity,
+            characterBible
+          );
+
+        continuity =
+          advanceContinuity(
+            continuity,
+            scene
+          );
+
+        return result;
+      }
+    );
+
+  console.log("[8/20] Prompt director...");
+
+  const prompts =
+    buildScenePromptPack(
+      continuousScenes,
+      characterBible
+    );
+
+  console.log("[9/20] Media planner...");
+
+  const mediaPlan =
+    buildMediaPlan({
+      project,
+      scenes: continuousScenes,
+      prompts,
+      characterBible
+    });
+
+  validateMediaPlan(
+    mediaPlan
+  );
+
+  console.log("[10/20] Video provider...");
+
+  const provider =
+    getVideoProvider(
+      project?.videoProvider ||
+        process.env.VIDEO_PROVIDER ||
+        "stock"
+    );
+
+  validateVideoProvider(
+    provider
+  );
+
+  const videoAssets = [];
+
+  for (
+    let i = 0;
+    i < continuousScenes.length;
+    i += 1
+  ) {
+    const scene =
+      continuousScenes[i];
+
+    const prompt =
+      prompts?.[i] ||
+      prompts?.scenes?.[i] ||
+      buildVisualPrompt(
+        scene,
+        characterBible
+      );
+
+    const asset =
+      await generateSceneVideo({
+        provider,
+        project,
+        scene,
+        prompt,
+        mediaPlan
+      });
+
+    videoAssets.push(asset);
+  }
+
+  console.log("[11/20] Voice engine...");
+
+  const voice =
+    await generateVoiceover({
+      text:
+        story?.narration ||
+        scriptInput?.script ||
+        scriptInput?.text ||
+        "",
+      outputDir: OUTPUT_DIR,
+      project
+    });
+
+  if (
+    !voice
+  ) {
+    throw new Error(
+      "Voiceover generation returned no result."
+    );
+  }
+
+  const voicePath =
+    getVideoPath(voice) ||
+    voice?.audioPath ||
+    voice?.path;
+
+  console.log("[12/20] Scene renderer...");
+
+  const sceneRender =
+    await renderSceneBatch({
+      project,
+      scenes: continuousScenes,
+      videoAssets,
+      outputDir: OUTPUT_DIR
+    });
+
+  console.log("[13/20] Caption renderer...");
+
+  const captionCues =
+    buildCaptionCues({
+      script:
+        story?.narration ||
+        scriptInput?.script ||
+        scriptInput?.text ||
+        "",
+      scenes:
+        continuousScenes
+    });
+
+  const assPath =
+    path.join(
+      OUTPUT_DIR,
+      `captions-${index}-${getTimestamp()}.ass`
+    );
+
+  createASS(
+    captionCues,
+    assPath
+  );
+
+  const captions =
+    await renderCaptions({
+      project,
+      scenes: continuousScenes,
+      captions: captionCues,
+      assPath,
+      outputDir: OUTPUT_DIR
+    });
+
+  console.log("[14/20] Audio mixer...");
+
+  const mixedAudio =
+    await mixAudio({
+      project,
+      voice,
+      voicePath,
+      outputDir: OUTPUT_DIR
+    });
+
+  console.log("[15/20] Final renderer...");
+
+  const finalPath =
+    path.join(
+      OUTPUT_DIR,
+      `short-${index}-${getTimestamp()}.mp4`
+    );
+
+  const rendered =
+    await renderFinalVideo({
+      project,
+      scenes: continuousScenes,
+      sceneRender,
+      mixedAudio,
+      captions,
+      outputPath: finalPath
+    });
+
+  const outputPath =
+    getVideoPath(rendered) ||
+    finalPath;
+
+  if (
+    !fs.existsSync(outputPath)
+  ) {
+    throw new Error(
+      `Final MP4 was not created: ${outputPath}`
+    );
+  }
+
+  console.log("[16/20] Production QA...");
+
+  const qa =
+    await runProductionQA(
+      outputPath
+    );
+
+  if (
+    qa?.valid === false
+  ) {
+    throw new Error(
+      `Production QA failed: ${
+        qa.reasons?.join(" ") ||
+        "quality requirements not met"
       }`
     );
   }
 
-  console.log("[16/20] Originality guard...");
+  console.log("[17/20] Originality guard...");
 
-  const originality = await checkOriginality({
-    project,
-    creativePlan,
-    scenes,
-    scriptInput
-  });
+  const contentText = [
+    story?.title,
+    story?.mission,
+    story?.narration,
+    ...continuousScenes.map(
+      (scene) =>
+        scene?.narration || ""
+    )
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  if (originality?.approved === false) {
+  const fingerprint =
+    createContentFingerprint(
+      contentText
+    );
+
+  const originality =
+    checkDuplicateContent(
+      contentText,
+      []
+    );
+
+  console.log(
+    `Content fingerprint: ${fingerprint}`
+  );
+
+  if (
+    originality?.duplicate
+  ) {
     throw new Error(
-      `Originality check rejected: ${
-        originality.reason || "duplicate/originality risk detected"
+      "Duplicate content detected."
+    );
+  }
+
+  console.log("[18/20] Safety gate...");
+
+  const safety =
+    evaluateVideoSafety({
+      story,
+      narration:
+        story?.narration,
+      scenes:
+        continuousScenes
+    });
+
+  if (
+    safety?.status === "REJECT"
+  ) {
+    throw new Error(
+      `Safety gate rejected content: ${
+        safety.reasons?.join(" ") ||
+        "safety risk detected"
       }`
     );
   }
 
-  console.log("[17/20] Safety gate...");
+  console.log("[19/20] Approval gate...");
 
-  const safety = await checkSafety({
-    project,
-    scriptInput,
-    scenes,
-    creativePlan
-  });
+  const approval =
+    evaluateApproval({
+      safety,
+      originality,
+      quality: qa,
+      publishRequested: false
+    });
 
-  if (safety?.approved === false) {
-    throw new Error(
-      `Safety gate rejected: ${
-        safety.reason || "safety requirements not met"
-      }`
+  console.log(
+    `Approval status: ${approval.status}`
+  );
+
+  console.log("[20/20] Publish package + report...");
+
+  const publishPackage =
+    buildPublishPackage({
+      videoPath: outputPath,
+      title:
+        story?.title ||
+        topic,
+      description:
+        story?.description ||
+        story?.narration ||
+        "",
+      hashtags:
+        story?.hashtags ||
+        [],
+      compliance: {
+        humanReviewRequired:
+          !approval.approved
+      },
+      approval
+    });
+
+  const publishValidation =
+    validatePublishPackage(
+      publishPackage
     );
-  }
 
-  console.log("[18/20] Approval gate...");
-
-  const approval = await requestApproval({
-    project,
-    videoPath: renderedVideo || finalPath,
-    qa,
-    originality,
-    safety
-  });
-
-  console.log("[19/20] Duplicate history...");
+  const report =
+    createPipelineReport({
+      status:
+        publishValidation.valid
+          ? "READY"
+          : "REVIEW",
+      videoNumber: index,
+      title:
+        publishPackage.title,
+      topic,
+      story,
+      scenes:
+        continuousScenes,
+      voice,
+      video: {
+        outputPath
+      },
+      quality: qa,
+      safety,
+      originality,
+      approval,
+      errors: publishValidation.reasons
+    });
 
   await saveDuplicateHistory({
     project,
     scriptInput,
-    scenes,
+    scenes:
+      continuousScenes,
     originality
-  });
-
-  console.log("[20/20] Publish metadata + report...");
-
-  const publishMetadata = await createPublishMetadata({
-    project,
-    creativePlan,
-    scriptInput,
-    scenes
-  });
-
-  const report = await createPipelineReport({
-    project,
-    scriptInput,
-    creativePlan,
-    scenes,
-    characterBible,
-    continuity,
-    qa,
-    originality,
-    safety,
-    approval,
-    publishMetadata,
-    outputPath: renderedVideo || finalPath
   });
 
   console.log("");
   console.log("======================================");
   console.log("VIDEO PIPELINE COMPLETED");
   console.log("======================================");
-  console.log(`Output: ${renderedVideo || finalPath}`);
-  console.log(`Approval: ${approval?.approved ? "APPROVED" : "PENDING"}`);
+  console.log(`Output: ${outputPath}`);
+  console.log(
+    `QA: ${qa?.valid ? "PASS" : "FAIL"}`
+  );
+  console.log(
+    `Approval: ${approval?.approved ? "APPROVED" : "REVIEW"}`
+  );
   console.log("======================================");
 
   return {
     project,
-    outputPath: renderedVideo || finalPath,
+    outputPath,
+    story,
+    scenes: continuousScenes,
+    voice,
     qa,
     originality,
     safety,
     approval,
-    publishMetadata,
+    publishPackage,
     report
   };
 }
 
 async function main() {
-  const { topic, count } = getArguments();
+  const {
+    topic,
+    count
+  } = getArguments();
 
   if (!topic) {
     console.error("");
     console.error("Usage:");
-    console.error('node src/orchestrator.mjs "Never Give Up" --count=1');
+    console.error(
+      'node src/orchestrator.mjs "Never Give Up" --count=1'
+    );
     console.error("");
     process.exitCode = 1;
     return;
@@ -346,25 +719,36 @@ async function main() {
 
   console.log("");
   console.log("======================================");
-  console.log("ZEESHAN AI VIDEO GENERATOR");
+  console.log(
+    "ZEESHAN AI VIDEO GENERATOR"
+  );
   console.log("======================================");
   console.log(`Topic: ${topic}`);
   console.log(`Video count: ${count}`);
   console.log(
-    `Target: ${config?.videoConfig?.width || 1080}x${
-      config?.videoConfig?.height || 1920
+    `Target: ${
+      config?.videoConfig?.width ||
+      1080
+    }x${
+      config?.videoConfig?.height ||
+      1920
     }`
   );
   console.log("======================================");
 
   const results = [];
 
-  for (let i = 1; i <= count; i += 1) {
+  for (
+    let i = 1;
+    i <= count;
+    i += 1
+  ) {
     try {
-      const result = await runOneVideo({
-        topic,
-        index: i
-      });
+      const result =
+        await runOneVideo({
+          topic,
+          index: i
+        });
 
       results.push({
         success: true,
@@ -372,36 +756,62 @@ async function main() {
       });
     } catch (error) {
       console.error("");
-      console.error(`VIDEO ${i} FAILED`);
-      console.error(error?.stack || error?.message || error);
+      console.error(
+        `VIDEO ${i} FAILED`
+      );
+      console.error(
+        error?.stack ||
+          error?.message ||
+          error
+      );
 
       results.push({
         success: false,
         index: i,
-        error: error?.message || String(error)
+        error:
+          error?.message ||
+          String(error)
       });
     }
   }
 
-  const successful = results.filter((item) => item.success).length;
+  const successful =
+    results.filter(
+      (item) =>
+        item.success
+    ).length;
 
   console.log("");
   console.log("======================================");
   console.log("PIPELINE SUMMARY");
   console.log("======================================");
   console.log(`Requested: ${count}`);
-  console.log(`Successful: ${successful}`);
-  console.log(`Failed: ${count - successful}`);
+  console.log(
+    `Successful: ${successful}`
+  );
+  console.log(
+    `Failed: ${count - successful}`
+  );
   console.log("======================================");
 
-  if (successful === 0) {
+  if (
+    successful === 0
+  ) {
     process.exitCode = 1;
   }
 }
 
-main().catch((error) => {
-  console.error("");
-  console.error("FATAL PIPELINE ERROR");
-  console.error(error?.stack || error?.message || error);
-  process.exitCode = 1;
-});
+main().catch(
+  (error) => {
+    console.error("");
+    console.error(
+      "FATAL PIPELINE ERROR"
+    );
+    console.error(
+      error?.stack ||
+        error?.message ||
+        error
+    );
+    process.exitCode = 1;
+  }
+);
