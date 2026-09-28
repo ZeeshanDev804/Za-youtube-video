@@ -1,0 +1,239 @@
+name: ZEESHAN AI LABS - Full System Test
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  full-system-test:
+    name: Full AI Video System Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+
+      - name: Verify system
+        run: |
+          echo "===== NODE ====="
+          node --version
+
+          echo "===== NPM ====="
+          npm --version
+
+          echo "===== FFMPEG ====="
+          ffmpeg -version
+
+          echo "===== FFPROBE ====="
+          ffprobe -version
+
+          echo "===== ESPEAK ====="
+          espeak-ng --version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify package
+        run: |
+          test -f package.json
+          npm list --depth=0
+
+      - name: Check source syntax
+        run: |
+          set -e
+
+          find src \
+            -type f \
+            \( -name "*.mjs" -o -name "*.js" \) \
+            -print0 |
+          while IFS= read -r -d '' file
+          do
+            echo "Checking syntax: $file"
+            node --check "$file"
+          done
+
+      - name: Run deep project test
+        run: |
+          node src/projectDeepTest.mjs
+
+      - name: Prepare test directories
+        run: |
+          rm -rf test_artifacts
+          mkdir -p test_artifacts
+          mkdir -p output_artifacts
+
+      - name: Test FFmpeg rendering
+        run: |
+          ffmpeg -y \
+            -f lavfi \
+            -i color=c=black:s=1080x1920:r=30 \
+            -t 3 \
+            -c:v libx264 \
+            -pix_fmt yuv420p \
+            -an \
+            test_artifacts/ffmpeg_test.mp4
+
+      - name: Validate FFmpeg output
+        run: |
+          test -f test_artifacts/ffmpeg_test.mp4
+
+          WIDTH=$(ffprobe \
+            -v error \
+            -select_streams v:0 \
+            -show_entries stream=width \
+            -of csv=p=0 \
+            test_artifacts/ffmpeg_test.mp4)
+
+          HEIGHT=$(ffprobe \
+            -v error \
+            -select_streams v:0 \
+            -show_entries stream=height \
+            -of csv=p=0 \
+            test_artifacts/ffmpeg_test.mp4)
+
+          echo "Resolution: ${WIDTH}x${HEIGHT}"
+
+          test "$WIDTH" = "1080"
+          test "$HEIGHT" = "1920"
+
+      - name: Check AI configuration
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "WARNING: GEMINI_API_KEY is not configured."
+          else
+            echo "GEMINI_API_KEY: configured"
+          fi
+
+          if [ -z "$PEXELS_API_KEY" ]; then
+            echo "WARNING: PEXELS_API_KEY is not configured."
+          else
+            echo "PEXELS_API_KEY: configured"
+          fi
+
+      - name: Run production orchestrator
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          OUTPUT_DIR: output_artifacts
+        run: |
+          echo "=========================================="
+          echo "STARTING PRODUCTION TEST"
+          echo "=========================================="
+
+          node src/orchestrator.mjs \
+            "Never Give Up" \
+            --count=1
+
+          echo "=========================================="
+          echo "PRODUCTION TEST FINISHED"
+          echo "=========================================="
+
+      - name: Find generated videos
+        run: |
+          echo "Searching for MP4 files..."
+
+          find . \
+            -not -path './node_modules/*' \
+            -not -path './.git/*' \
+            -type f \
+            -name "*.mp4" \
+            -print
+
+      - name: Validate production MP4
+        run: |
+          set -e
+
+          MP4=$(find output_artifacts \
+            -maxdepth 1 \
+            -type f \
+            -name "*.mp4" \
+            | head -n 1)
+
+          if [ -z "$MP4" ]; then
+            echo "RED: Production MP4 was NOT generated."
+            exit 1
+          fi
+
+          echo "Production video:"
+          echo "$MP4"
+
+          WIDTH=$(ffprobe \
+            -v error \
+            -select_streams v:0 \
+            -show_entries stream=width \
+            -of csv=p=0 \
+            "$MP4")
+
+          HEIGHT=$(ffprobe \
+            -v error \
+            -select_streams v:0 \
+            -show_entries stream=height \
+            -of csv=p=0 \
+            "$MP4")
+
+          DURATION=$(ffprobe \
+            -v error \
+            -show_entries format=duration \
+            -of csv=p=0 \
+            "$MP4")
+
+          CODEC=$(ffprobe \
+            -v error \
+            -select_streams v:0 \
+            -show_entries stream=codec_name \
+            -of csv=p=0 \
+            "$MP4")
+
+          echo "Width: $WIDTH"
+          echo "Height: $HEIGHT"
+          echo "Duration: $DURATION"
+          echo "Video codec: $CODEC"
+
+          test "$WIDTH" = "1080"
+          test "$HEIGHT" = "1920"
+          test "$CODEC" = "h264"
+
+          awk \
+            -v duration="$DURATION" \
+            'BEGIN {
+              if (duration < 20 || duration > 59) {
+                print "RED: Duration outside 20-59 seconds."
+                exit 1
+              }
+
+              print "GREEN: Duration is inside 20-59 seconds."
+            }'
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeeshan-ai-labs-test-results
+          path: |
+            output_artifacts/*.mp4
+            test_artifacts/*.mp4
+          if-no-files-found: warn
+
+      - name: Final result
+        run: |
+          echo "=========================================="
+          echo "GREEN: FULL SYSTEM TEST PASSED"
+          echo "=========================================="
