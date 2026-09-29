@@ -3,9 +3,11 @@ console.log(
 );
 
 const mediaSourceScenes =
+  typeof continuousScenes !== 'undefined' &&
   Array.isArray(continuousScenes)
     ? continuousScenes
-    : Array.isArray(scenes)
+    : typeof scenes !== 'undefined' &&
+      Array.isArray(scenes)
       ? scenes
       : [];
 
@@ -43,9 +45,41 @@ const mediaScenes =
           typeof buildVisualPrompt === 'function'
             ? buildVisualPrompt(
                 scene,
-                story
+                typeof story !== 'undefined'
+                  ? story
+                  : {}
               )
-            : ''
+            : `
+Create a professional cinematic vertical YouTube Shorts scene.
+
+Story scene:
+${index + 1}
+
+Role:
+${scene?.role || 'Story scene'}
+
+Action:
+${
+  scene?.narration ||
+  scene?.action ||
+  scene?.description ||
+  'Show the story action clearly and naturally.'
+}
+
+Requirements:
+- vertical 9:16
+- cinematic composition
+- clear subject
+- natural movement
+- consistent character
+- consistent environment
+- strong visual storytelling
+- realistic lighting
+- no random unrelated objects
+- no copyrighted characters
+- no watermark
+- no logo
+`
         );
 
       if (!generatedVisualPrompt) {
