@@ -3,26 +3,78 @@ console.log(
 );
 
 const mediaSourceScenes =
+  typeof continuousScenes !== 'undefined' &&
   Array.isArray(continuousScenes)
     ? continuousScenes
-    : Array.isArray(scenes)
+    : typeof scenes !== 'undefined' &&
+      Array.isArray(scenes)
       ? scenes
       : [];
+
+if (mediaSourceScenes.length === 0) {
+  throw new Error(
+    '[MediaPlanner] No scenes are available for media planning.'
+  );
+}
 
 const mediaScenes =
   mediaSourceScenes.map(
     (scene, index) => {
-      const generatedVisualPrompt =
+      const existingVisualPrompt =
         scene?.visualPrompt ||
         scene?.visual_prompt ||
         scene?.image_prompt ||
         scene?.imagePrompt ||
         scene?.prompt ||
-        prompts?.[index] ||
-        prompts?.scenes?.[index] ||
-        buildVisualPrompt(
-          scene,
-          story
+        (
+          typeof prompts !== 'undefined' &&
+          Array.isArray(prompts)
+            ? prompts[index]
+            : ''
+        ) ||
+        (
+          typeof prompts !== 'undefined' &&
+          Array.isArray(prompts?.scenes)
+            ? prompts.scenes[index]
+            : ''
+        );
+
+      const generatedVisualPrompt =
+        existingVisualPrompt ||
+        (
+          typeof buildVisualPrompt === 'function'
+            ? buildVisualPrompt(
+                scene,
+                typeof story !== 'undefined'
+                  ? story
+                  : {}
+              )
+            : `
+Create a professional cinematic vertical YouTube Shorts scene.
+
+Scene:
+${index + 1}
+
+Role:
+${scene?.role || 'Story scene'}
+
+Action:
+${scene?.narration || scene?.action || scene?.description || 'Show the story action clearly and naturally.'}
+
+Requirements:
+- vertical 9:16
+- cinematic composition
+- clear subject
+- natural movement
+- consistent character
+- consistent environment
+- strong visual storytelling
+- realistic lighting
+- no random unrelated objects
+- no copyrighted characters
+- no watermark
+- no logo
+`
         );
 
       if (!generatedVisualPrompt) {
@@ -33,6 +85,10 @@ const mediaScenes =
 
       return {
         ...scene,
+
+        sceneNumber:
+          scene?.sceneNumber ??
+          index + 1,
 
         visualPrompt:
           generatedVisualPrompt,
@@ -48,12 +104,6 @@ const mediaScenes =
       };
     }
   );
-
-if (mediaScenes.length === 0) {
-  throw new Error(
-    '[MediaPlanner] No scenes are available for media planning.'
-  );
-}
 
 const mediaPlan =
   buildMediaPlan(
