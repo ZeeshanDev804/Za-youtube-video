@@ -25,7 +25,9 @@ function fail(name, detail = '') {
 }
 
 function walk(dir) {
-  if (!fs.existsSync(dir)) return [];
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
 
   const output = [];
 
@@ -45,12 +47,16 @@ function walk(dir) {
 }
 
 function relative(file) {
-  return path.relative(ROOT, file).replaceAll('\\', '/');
+  return path
+    .relative(ROOT, file)
+    .replaceAll('\\', '/');
 }
 
 async function checkSyntax(files) {
   for (const file of files) {
-    if (!/\.(mjs|js|cjs)$/.test(file)) continue;
+    if (!/\.(mjs|js|cjs)$/.test(file)) {
+      continue;
+    }
 
     try {
       execFileSync(
@@ -76,7 +82,9 @@ async function checkSyntax(files) {
 
 async function checkImports(files) {
   for (const file of files) {
-    if (!/\.(mjs|js)$/.test(file)) continue;
+    if (!/\.(mjs|js)$/.test(file)) {
+      continue;
+    }
 
     try {
       await import(
@@ -98,35 +106,45 @@ async function checkImports(files) {
 function checkRequiredFiles(files) {
   const required = [
     'src/orchestrator.mjs',
-    'src/store.mjs',
     'src/config/index.mjs',
-    'src/modules/scriptEngine.mjs',
-    'src/modules/visualEngine.mjs',
-    'src/modules/voiceEngine.mjs',
-    'src/modules/renderEngine.mjs',
+
+    'src/modules/scriptInput.mjs',
     'src/modules/storyDirector.mjs',
-    'src/modules/sceneDirector.mjs',
-    'src/modules/promptDirector.mjs',
     'src/modules/storyQuality.mjs',
+
+    'src/modules/sceneDirector.mjs',
+    'src/modules/sceneContinuity.mjs',
+    'src/modules/characterBible.mjs',
+    'src/modules/promptDirector.mjs',
+
+    'src/modules/mediaPlanner.mjs',
     'src/modules/videoProvider.mjs',
     'src/modules/sceneRenderer.mjs',
-    'src/modules/captionRenderer.mjs',
+    'src/modules/finalRenderer.mjs',
+
+    'src/modules/voiceEngine.mjs',
     'src/modules/audioMixer.mjs',
+    'src/modules/captionRenderer.mjs',
+
     'src/modules/videoQuality.mjs',
-    'src/modules/audienceDirector.mjs',
-    'src/modules/youtubeCompliance.mjs',
-    'src/modules/nicheDirector.mjs',
-    'src/modules/characterBible.mjs',
-    'src/modules/trendDirector.mjs',
+    'src/modules/productionQA.mjs',
+
     'src/modules/creativeDirector.mjs',
+    'src/modules/audienceDirector.mjs',
+    'src/modules/nicheDirector.mjs',
+    'src/modules/trendDirector.mjs',
+
     'src/modules/metadataDirector.mjs',
-    'src/modules/sceneContinuity.mjs',
     'src/modules/publishMetadata.mjs',
+
     'src/modules/originalityGuard.mjs',
     'src/modules/safetyGate.mjs',
+    'src/modules/youtubeCompliance.mjs',
     'src/modules/approvalGate.mjs',
-    'src/modules/finalRenderer.mjs',
-    'src/modules/productionController.mjs'
+
+    'src/modules/pipelineController.mjs',
+    'src/modules/pipelineReport.mjs',
+    'src/modules/duplicateHistory.mjs'
   ];
 
   for (const file of required) {
@@ -135,7 +153,9 @@ function checkRequiredFiles(files) {
     );
 
     if (exists) {
-      pass(`Required: ${file}`);
+      pass(
+        `Required: ${file}`
+      );
     } else {
       fail(
         `Required: ${file}`,
@@ -146,23 +166,29 @@ function checkRequiredFiles(files) {
 }
 
 function checkPackage() {
-  const packageFile = path.join(
-    ROOT,
-    'package.json'
-  );
+  const packageFile =
+    path.join(
+      ROOT,
+      'package.json'
+    );
 
   if (!fs.existsSync(packageFile)) {
     fail(
       'package.json',
       'package.json is missing.'
     );
+
     return;
   }
 
   try {
-    const pkg = JSON.parse(
-      fs.readFileSync(packageFile, 'utf8')
-    );
+    const pkg =
+      JSON.parse(
+        fs.readFileSync(
+          packageFile,
+          'utf8'
+        )
+      );
 
     pass(
       'package.json',
@@ -178,13 +204,14 @@ function checkPackage() {
 
 function checkFFmpeg() {
   try {
-    const version = execFileSync(
-      'ffmpeg',
-      ['-version'],
-      {
-        encoding: 'utf8'
-      }
-    );
+    const version =
+      execFileSync(
+        'ffmpeg',
+        ['-version'],
+        {
+          encoding: 'utf8'
+        }
+      );
 
     pass(
       'FFmpeg',
@@ -199,26 +226,52 @@ function checkFFmpeg() {
 }
 
 function printReport(files) {
-  const passed = results.filter(
-    item => item.status === 'PASS'
-  ).length;
+  const passed =
+    results.filter(
+      item => item.status === 'PASS'
+    ).length;
 
-  const failed = results.filter(
-    item => item.status === 'FAIL'
-  ).length;
+  const failed =
+    results.filter(
+      item => item.status === 'FAIL'
+    ).length;
 
   console.log('\n');
-  console.log('==========================================');
-  console.log(' ZEESHAN AI LABS - PROJECT DEEP TEST');
-  console.log('==========================================');
+  console.log(
+    '=========================================='
+  );
 
-  console.log(`\nTotal source files found: ${files.length}`);
-  console.log(`PASS: ${passed}`);
-  console.log(`FAIL: ${failed}`);
+  console.log(
+    ' ZEESHAN AI LABS - PROJECT DEEP TEST'
+  );
 
-  console.log('\n------------------------------------------');
-  console.log('RESULTS');
-  console.log('------------------------------------------');
+  console.log(
+    '=========================================='
+  );
+
+  console.log(
+    `\nTotal source files found: ${files.length}`
+  );
+
+  console.log(
+    `PASS: ${passed}`
+  );
+
+  console.log(
+    `FAIL: ${failed}`
+  );
+
+  console.log(
+    '\n------------------------------------------'
+  );
+
+  console.log(
+    'RESULTS'
+  );
+
+  console.log(
+    '------------------------------------------'
+  );
 
   for (const item of results) {
     const icon =
@@ -237,7 +290,9 @@ function printReport(files) {
     }
   }
 
-  console.log('\n==========================================');
+  console.log(
+    '\n=========================================='
+  );
 
   if (failed === 0) {
     console.log(
@@ -249,23 +304,39 @@ function printReport(files) {
     );
   }
 
-  console.log('==========================================\n');
+  console.log(
+    '==========================================\n'
+  );
 
   process.exitCode =
-    failed > 0 ? 1 : 0;
+    failed > 0
+      ? 1
+      : 0;
 }
 
 async function main() {
-  const files = walk(SRC);
+  const files =
+    walk(SRC);
 
   checkPackage();
-  checkRequiredFiles(files);
+
+  checkRequiredFiles(
+    files
+  );
+
   checkFFmpeg();
 
-  await checkSyntax(files);
-  await checkImports(files);
+  await checkSyntax(
+    files
+  );
 
-  printReport(files);
+  await checkImports(
+    files
+  );
+
+  printReport(
+    files
+  );
 }
 
 main().catch(error => {
