@@ -11,14 +11,13 @@ const mediaSourceScenes =
 
 if (mediaSourceScenes.length === 0) {
   throw new Error(
-    "[MediaPlanner] No scenes are available for media planning."
+    '[MediaPlanner] No scenes are available for media planning.'
   );
 }
 
 const mediaScenes =
   mediaSourceScenes.map(
     (scene, index) => {
-
       const existingVisualPrompt =
         scene?.visualPrompt ||
         scene?.visual_prompt ||
@@ -26,21 +25,27 @@ const mediaScenes =
         scene?.imagePrompt ||
         scene?.prompt ||
         (
+          typeof prompts !== 'undefined' &&
           Array.isArray(prompts)
             ? prompts[index]
-            : ""
+            : ''
         ) ||
         (
+          typeof prompts !== 'undefined' &&
           Array.isArray(prompts?.scenes)
             ? prompts.scenes[index]
-            : ""
+            : ''
         );
 
       const generatedVisualPrompt =
         existingVisualPrompt ||
-        buildVisualPrompt(
-          scene,
-          story
+        (
+          typeof buildVisualPrompt === 'function'
+            ? buildVisualPrompt(
+                scene,
+                story
+              )
+            : ''
         );
 
       if (!generatedVisualPrompt) {
@@ -86,7 +91,9 @@ if (
 ) {
   throw new Error(
     `[MediaPlanner] ${
-      mediaValidation.reasons.join(" ")
+      mediaValidation.reasons.join(
+        " "
+      )
     }`
   );
 }
