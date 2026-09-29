@@ -16,7 +16,6 @@ import {
 } from "./modules/creativeDirector.mjs";
 
 import {
-  evaluateStory,
   assertStoryQuality
 } from "./modules/storyQuality.mjs";
 
@@ -116,36 +115,48 @@ const __dirname = path.dirname(__filename);
 
 const OUTPUT_DIR =
   process.env.OUTPUT_DIR ||
-  path.join(__dirname, "..", "output_artifacts");
-
-fs.mkdirSync(OUTPUT_DIR, {
-  recursive: true
-});
-
-function getArguments() {
-  const args = process.argv.slice(2);
-
-  const countArg = args.find((arg) =>
-    arg.startsWith("--count=")
+  path.join(
+    __dirname,
+    "..",
+    "output_artifacts"
   );
 
-  const count = countArg
-    ? Math.max(
-        1,
-        Number.parseInt(
-          countArg.split("=")[1],
-          10
-        ) || 1
-      )
-    : 1;
+fs.mkdirSync(
+  OUTPUT_DIR,
+  {
+    recursive: true
+  }
+);
 
-  const topic = args
-    .filter(
+function getArguments() {
+  const args =
+    process.argv.slice(2);
+
+  const countArg =
+    args.find(
       (arg) =>
-        !arg.startsWith("--")
-    )
-    .join(" ")
-    .trim();
+        arg.startsWith("--count=")
+    );
+
+  const count =
+    countArg
+      ? Math.max(
+          1,
+          Number.parseInt(
+            countArg.split("=")[1],
+            10
+          ) || 1
+        )
+      : 1;
+
+  const topic =
+    args
+      .filter(
+        (arg) =>
+          !arg.startsWith("--")
+      )
+      .join(" ")
+      .trim();
 
   return {
     topic,
@@ -156,11 +167,16 @@ function getArguments() {
 function getTimestamp() {
   return new Date()
     .toISOString()
-    .replace(/[:.]/g, "-");
+    .replace(
+      /[:.]/g,
+      "-"
+    );
 }
 
 function getVideoPath(result) {
-  if (typeof result === "string") {
+  if (
+    typeof result === "string"
+  ) {
     return result;
   }
 
@@ -178,36 +194,61 @@ async function runOneVideo({
   index
 }) {
   console.log("");
-  console.log("======================================");
-  console.log(`STARTING VIDEO ${index}`);
-  console.log(`TOPIC: ${topic}`);
-  console.log("======================================");
+  console.log(
+    "======================================"
+  );
+  console.log(
+    `STARTING VIDEO ${index}`
+  );
+  console.log(
+    `TOPIC: ${topic}`
+  );
+  console.log(
+    "======================================"
+  );
 
   const project = {
-    id: `video-${Date.now()}-${index}`,
+    id:
+      `video-${Date.now()}-${index}`,
+
     topic,
-    language: "en",
-    audience: "UK-US-Europe",
-    targetDuration: 40,
-    format: "youtube-shorts",
+
+    language:
+      "en",
+
+    audience:
+      "UK-US-Europe",
+
+    targetDuration:
+      40,
+
+    format:
+      "youtube-shorts",
+
     width:
       config?.videoConfig?.width ||
       1080,
+
     height:
       config?.videoConfig?.height ||
       1920,
+
     minDuration:
       config?.videoConfig?.minDuration ||
       20,
+
     maxDuration:
       config?.videoConfig?.maxDuration ||
       59,
+
     fps:
       config?.videoConfig?.fps ||
       30
   };
 
-  console.log("[1/20] Script input...");
+  console.log(
+    "[1/20] Script input..."
+  );
 
   const parsedInput =
     await parseScriptInput({
@@ -218,7 +259,8 @@ async function runOneVideo({
   const requests =
     createVideoRequests({
       topic,
-      scriptInput: parsedInput,
+      scriptInput:
+        parsedInput,
       count: 1
     });
 
@@ -228,7 +270,9 @@ async function runOneVideo({
       ? requests[0]
       : parsedInput;
 
-  console.log("[2/20] Creative director...");
+  console.log(
+    "[2/20] Creative director..."
+  );
 
   const storyFormat =
     chooseStoryFormat({
@@ -258,7 +302,9 @@ async function runOneVideo({
     );
   }
 
-  console.log("[3/20] Story director...");
+  console.log(
+    "[3/20] Story director..."
+  );
 
   const story =
     await generateStory(
@@ -268,21 +314,48 @@ async function runOneVideo({
           scriptInput?.script ||
           scriptInput?.text ||
           "",
+
         project,
+
         creativeBrief
       }
     );
 
-  console.log("[4/20] Story quality...");
-
-  const storyQuality =
-    evaluateStory(story);
-
-  assertStoryQuality(
-    storyQuality
+  console.log(
+    "[4/20] Story quality..."
   );
 
-  console.log("[5/20] Scene director...");
+  /*
+   * IMPORTANT:
+   * Pass the actual story object
+   * directly to StoryQuality.
+   *
+   * Do NOT run:
+   * evaluateStory(story)
+   * and then pass that result
+   * into assertStoryQuality().
+   */
+
+  const storyQuality =
+    assertStoryQuality(
+      story
+    );
+
+  console.log(
+    `Story quality score: ${storyQuality.score}%`
+  );
+
+  console.log(
+    `Story words: ${storyQuality.wordCount}`
+  );
+
+  console.log(
+    `Story duration: ${storyQuality.estimatedDuration}s`
+  );
+
+  console.log(
+    "[5/20] Scene director..."
+  );
 
   const rawScenes =
     await buildScenes(
@@ -307,7 +380,9 @@ async function runOneVideo({
     );
   }
 
-  console.log("[6/20] Character bible...");
+  console.log(
+    "[6/20] Character bible..."
+  );
 
   const characterBible =
     createCharacterBible({
@@ -320,7 +395,9 @@ async function runOneVideo({
     characterBible
   );
 
-  console.log("[7/20] Scene continuity...");
+  console.log(
+    "[7/20] Scene continuity..."
+  );
 
   let continuity =
     createContinuityState({
@@ -348,7 +425,9 @@ async function runOneVideo({
       }
     );
 
-  console.log("[8/20] Prompt director...");
+  console.log(
+    "[8/20] Prompt director..."
+  );
 
   const prompts =
     buildScenePromptPack(
@@ -356,12 +435,15 @@ async function runOneVideo({
       characterBible
     );
 
-  console.log("[9/20] Media planner...");
+  console.log(
+    "[9/20] Media planner..."
+  );
 
   const mediaPlan =
     buildMediaPlan({
       project,
-      scenes: continuousScenes,
+      scenes:
+        continuousScenes,
       prompts,
       characterBible
     });
@@ -370,7 +452,9 @@ async function runOneVideo({
     mediaPlan
   );
 
-  console.log("[10/20] Video provider...");
+  console.log(
+    "[10/20] Video provider..."
+  );
 
   const provider =
     getVideoProvider(
@@ -410,10 +494,14 @@ async function runOneVideo({
         mediaPlan
       });
 
-    videoAssets.push(asset);
+    videoAssets.push(
+      asset
+    );
   }
 
-  console.log("[11/20] Voice engine...");
+  console.log(
+    "[11/20] Voice engine..."
+  );
 
   const voice =
     await generateVoiceover({
@@ -422,34 +510,58 @@ async function runOneVideo({
         scriptInput?.script ||
         scriptInput?.text ||
         "",
-      outputDir: OUTPUT_DIR,
+
+      outputDir:
+        OUTPUT_DIR,
+
       project
     });
 
-  if (
-    !voice
-  ) {
+  if (!voice) {
     throw new Error(
       "Voiceover generation returned no result."
     );
   }
 
   const voicePath =
-    getVideoPath(voice) ||
+    getVideoPath(
+      voice
+    ) ||
     voice?.audioPath ||
     voice?.path;
 
-  console.log("[12/20] Scene renderer...");
+  if (!voicePath) {
+    throw new Error(
+      "Voiceover path was not returned."
+    );
+  }
+
+  if (
+    typeof validateVoiceDuration ===
+      "function"
+  ) {
+    validateVoiceDuration(
+      voice
+    );
+  }
+
+  console.log(
+    "[12/20] Scene renderer..."
+  );
 
   const sceneRender =
     await renderSceneBatch({
       project,
-      scenes: continuousScenes,
+      scenes:
+        continuousScenes,
       videoAssets,
-      outputDir: OUTPUT_DIR
+      outputDir:
+        OUTPUT_DIR
     });
 
-  console.log("[13/20] Caption renderer...");
+  console.log(
+    "[13/20] Caption renderer..."
+  );
 
   const captionCues =
     buildCaptionCues({
@@ -458,6 +570,7 @@ async function runOneVideo({
         scriptInput?.script ||
         scriptInput?.text ||
         "",
+
       scenes:
         continuousScenes
     });
@@ -476,23 +589,31 @@ async function runOneVideo({
   const captions =
     await renderCaptions({
       project,
-      scenes: continuousScenes,
-      captions: captionCues,
+      scenes:
+        continuousScenes,
+      captions:
+        captionCues,
       assPath,
-      outputDir: OUTPUT_DIR
+      outputDir:
+        OUTPUT_DIR
     });
 
-  console.log("[14/20] Audio mixer...");
+  console.log(
+    "[14/20] Audio mixer..."
+  );
 
   const mixedAudio =
     await mixAudio({
       project,
       voice,
       voicePath,
-      outputDir: OUTPUT_DIR
+      outputDir:
+        OUTPUT_DIR
     });
 
-  console.log("[15/20] Final renderer...");
+  console.log(
+    "[15/20] Final renderer..."
+  );
 
   const finalPath =
     path.join(
@@ -503,26 +624,34 @@ async function runOneVideo({
   const rendered =
     await renderFinalVideo({
       project,
-      scenes: continuousScenes,
+      scenes:
+        continuousScenes,
       sceneRender,
       mixedAudio,
       captions,
-      outputPath: finalPath
+      outputPath:
+        finalPath
     });
 
   const outputPath =
-    getVideoPath(rendered) ||
+    getVideoPath(
+      rendered
+    ) ||
     finalPath;
 
   if (
-    !fs.existsSync(outputPath)
+    !fs.existsSync(
+      outputPath
+    )
   ) {
     throw new Error(
       `Final MP4 was not created: ${outputPath}`
     );
   }
 
-  console.log("[16/20] Production QA...");
+  console.log(
+    "[16/20] Production QA..."
+  );
 
   const qa =
     await runProductionQA(
@@ -540,12 +669,15 @@ async function runOneVideo({
     );
   }
 
-  console.log("[17/20] Originality guard...");
+  console.log(
+    "[17/20] Originality guard..."
+  );
 
   const contentText = [
     story?.title,
     story?.mission,
     story?.narration,
+
     ...continuousScenes.map(
       (scene) =>
         scene?.narration || ""
@@ -577,13 +709,17 @@ async function runOneVideo({
     );
   }
 
-  console.log("[18/20] Safety gate...");
+  console.log(
+    "[18/20] Safety gate..."
+  );
 
   const safety =
     evaluateVideoSafety({
       story,
+
       narration:
         story?.narration,
+
       scenes:
         continuousScenes
     });
@@ -599,39 +735,51 @@ async function runOneVideo({
     );
   }
 
-  console.log("[19/20] Approval gate...");
+  console.log(
+    "[19/20] Approval gate..."
+  );
 
   const approval =
     evaluateApproval({
       safety,
       originality,
-      quality: qa,
-      publishRequested: false
+      quality:
+        qa,
+      publishRequested:
+        false
     });
 
   console.log(
     `Approval status: ${approval.status}`
   );
 
-  console.log("[20/20] Publish package + report...");
+  console.log(
+    "[20/20] Publish package + report..."
+  );
 
   const publishPackage =
     buildPublishPackage({
-      videoPath: outputPath,
+      videoPath:
+        outputPath,
+
       title:
         story?.title ||
         topic,
+
       description:
         story?.description ||
         story?.narration ||
         "",
+
       hashtags:
         story?.hashtags ||
         [],
+
       compliance: {
         humanReviewRequired:
           !approval.approved
       },
+
       approval
     });
 
@@ -646,50 +794,86 @@ async function runOneVideo({
         publishValidation.valid
           ? "READY"
           : "REVIEW",
-      videoNumber: index,
+
+      videoNumber:
+        index,
+
       title:
         publishPackage.title,
+
       topic,
+
       story,
+
       scenes:
         continuousScenes,
+
       voice,
+
       video: {
         outputPath
       },
-      quality: qa,
+
+      quality:
+        qa,
+
       safety,
+
       originality,
+
       approval,
-      errors: publishValidation.reasons
+
+      errors:
+        publishValidation.reasons
     });
 
   await saveDuplicateHistory({
     project,
     scriptInput,
+
     scenes:
       continuousScenes,
+
     originality
   });
 
   console.log("");
-  console.log("======================================");
-  console.log("VIDEO PIPELINE COMPLETED");
-  console.log("======================================");
-  console.log(`Output: ${outputPath}`);
   console.log(
-    `QA: ${qa?.valid ? "PASS" : "FAIL"}`
+    "======================================"
   );
   console.log(
-    `Approval: ${approval?.approved ? "APPROVED" : "REVIEW"}`
+    "VIDEO PIPELINE COMPLETED"
   );
-  console.log("======================================");
+  console.log(
+    "======================================"
+  );
+  console.log(
+    `Output: ${outputPath}`
+  );
+  console.log(
+    `QA: ${
+      qa?.valid
+        ? "PASS"
+        : "FAIL"
+    }`
+  );
+  console.log(
+    `Approval: ${
+      approval?.approved
+        ? "APPROVED"
+        : "REVIEW"
+    }`
+  );
+  console.log(
+    "======================================"
+  );
 
   return {
     project,
     outputPath,
     story,
-    scenes: continuousScenes,
+    scenes:
+      continuousScenes,
     voice,
     qa,
     originality,
@@ -708,7 +892,9 @@ async function main() {
 
   if (!topic) {
     console.error("");
-    console.error("Usage:");
+    console.error(
+      "Usage:"
+    );
     console.error(
       'node src/orchestrator.mjs "Never Give Up" --count=1'
     );
@@ -718,13 +904,21 @@ async function main() {
   }
 
   console.log("");
-  console.log("======================================");
+  console.log(
+    "======================================"
+  );
   console.log(
     "ZEESHAN AI VIDEO GENERATOR"
   );
-  console.log("======================================");
-  console.log(`Topic: ${topic}`);
-  console.log(`Video count: ${count}`);
+  console.log(
+    "======================================"
+  );
+  console.log(
+    `Topic: ${topic}`
+  );
+  console.log(
+    `Video count: ${count}`
+  );
   console.log(
     `Target: ${
       config?.videoConfig?.width ||
@@ -734,7 +928,9 @@ async function main() {
       1920
     }`
   );
-  console.log("======================================");
+  console.log(
+    "======================================"
+  );
 
   const results = [];
 
@@ -782,17 +978,27 @@ async function main() {
     ).length;
 
   console.log("");
-  console.log("======================================");
-  console.log("PIPELINE SUMMARY");
-  console.log("======================================");
-  console.log(`Requested: ${count}`);
+  console.log(
+    "======================================"
+  );
+  console.log(
+    "PIPELINE SUMMARY"
+  );
+  console.log(
+    "======================================"
+  );
+  console.log(
+    `Requested: ${count}`
+  );
   console.log(
     `Successful: ${successful}`
   );
   console.log(
     `Failed: ${count - successful}`
   );
-  console.log("======================================");
+  console.log(
+    "======================================"
+  );
 
   if (
     successful === 0
