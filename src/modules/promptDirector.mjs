@@ -4,139 +4,34 @@ function cleanText(value) {
     .trim();
 }
 
-function getSceneNumber(scene, fallback = 1) {
-  const value = Number(
-    scene?.sceneNumber ??
-    scene?.scene_number ??
-    fallback
-  );
+function buildCharacterBible(story) {
+  return {
+    characterId: 'main-character-01',
 
-  return Number.isFinite(value) && value > 0
-    ? value
-    : fallback;
+    description:
+      'One consistent main character whose appearance, clothing, age and physical identity remain unchanged throughout the entire video.',
+
+    continuityRule:
+      'Do not change the character identity between scenes.',
+
+    storyGoal:
+      cleanText(story?.mission)
+  };
 }
 
-function getSceneRole(scene) {
-  return (
-    cleanText(scene?.role) ||
-    'story progression'
-  );
-}
-
-function getSceneNarration(scene) {
-  return (
-    cleanText(scene?.narration) ||
-    cleanText(scene?.voiceover) ||
-    cleanText(scene?.text) ||
-    cleanText(scene?.description) ||
-    ''
-  );
-}
-
-function getSceneAction(scene) {
-  return (
-    cleanText(scene?.action) ||
-    cleanText(scene?.sceneAction) ||
-    cleanText(scene?.scene_action) ||
-    getSceneNarration(scene)
-  );
-}
-
-function getSceneEmotion(scene) {
-  return (
-    cleanText(scene?.emotion) ||
-    'natural emotional expression'
-  );
-}
-
-function getCameraPrompt(scene) {
-  return (
-    cleanText(scene?.cameraPrompt) ||
-    cleanText(scene?.camera_prompt) ||
-    'cinematic camera movement with clear subject framing'
-  );
-}
-
-function getExistingVisualPrompt(scene) {
+function getSceneVisualDescription(scene) {
   return (
     cleanText(scene?.visualPrompt) ||
     cleanText(scene?.visual_prompt) ||
     cleanText(scene?.image_prompt) ||
     cleanText(scene?.imagePrompt) ||
     cleanText(scene?.visual) ||
-    ''
+    cleanText(scene?.description) ||
+    cleanText(scene?.action) ||
+    cleanText(scene?.narration) ||
+    cleanText(scene?.role) ||
+    'Show the main story action clearly and naturally.'
   );
-}
-
-function buildCharacterBible(story) {
-  return {
-    characterId:
-      cleanText(
-        story?.characterBible?.characterId
-      ) ||
-      'main-character-01',
-
-    description:
-      cleanText(
-        story?.characterBible?.description
-      ) ||
-      'One consistent main character whose appearance, clothing, age and physical identity remain unchanged throughout the entire video.',
-
-    continuityRule:
-      cleanText(
-        story?.characterBible?.continuityRule
-      ) ||
-      'Do not change the character identity, clothing or physical appearance between scenes.'
-  };
-}
-
-function buildFallbackVisualDescription(
-  scene,
-  story
-) {
-  const sceneNumber =
-    getSceneNumber(scene);
-
-  const title =
-    cleanText(story?.title) ||
-    'Original YouTube Shorts story';
-
-  const mission =
-    cleanText(story?.mission) ||
-    'Show the story mission clearly through visual action.';
-
-  const role =
-    getSceneRole(scene);
-
-  const narration =
-    getSceneNarration(scene);
-
-  const action =
-    getSceneAction(scene);
-
-  const emotion =
-    getSceneEmotion(scene);
-
-  return `
-Scene ${sceneNumber} from the story "${title}".
-
-Story mission:
-${mission}
-
-Scene role:
-${role}
-
-Narration meaning:
-${narration}
-
-Visible action:
-${action}
-
-Emotional state:
-${emotion}
-
-Create a scene-specific visual that clearly shows the character performing the action described by the narration. The visual must advance the story and must not be a generic unrelated shot.
-  `.trim();
 }
 
 export function buildVisualPrompt(
@@ -152,77 +47,46 @@ export function buildVisualPrompt(
 
   const style =
     cleanText(options.style) ||
-    cleanText(story?.style) ||
     'cinematic photorealistic';
-
-  const sceneNumber =
-    getSceneNumber(scene);
-
-  const role =
-    getSceneRole(scene);
-
-  const narration =
-    getSceneNarration(scene);
-
-  const action =
-    getSceneAction(scene);
-
-  const emotion =
-    getSceneEmotion(scene);
-
-  const camera =
-    getCameraPrompt(scene);
-
-  const existingVisual =
-    getExistingVisualPrompt(scene);
-
-  const visualDescription =
-    existingVisual ||
-    buildFallbackVisualDescription(
-      scene,
-      story
-    );
 
   const character =
     buildCharacterBible(story);
 
-  const title =
-    cleanText(story?.title) ||
-    'Original YouTube Shorts story';
-
-  const mission =
-    cleanText(story?.mission) ||
-    'Tell a clear original story through connected visual scenes.';
+  const visualDescription =
+    getSceneVisualDescription(scene);
 
   return `
 Create one professional vertical YouTube Shorts video scene.
 
 STORY:
-${title}
+${cleanText(story?.title)}
 
 MAIN MISSION:
-${mission}
+${cleanText(story?.mission)}
 
-SCENE NUMBER:
-${sceneNumber}
+SCENE:
+${cleanText(scene?.sceneNumber)}
 
 SCENE ROLE:
-${role}
+${cleanText(scene?.role)}
 
-NARRATION:
-${narration}
+SCENE ACTION:
+${cleanText(scene?.narration)}
 
-VISIBLE ACTION:
-${action}
-
-VISUAL STORY DESCRIPTION:
+VISUAL DESCRIPTION:
 ${visualDescription}
 
 CAMERA:
-${camera}
+${
+  cleanText(scene?.cameraPrompt) ||
+  'Natural cinematic camera movement matching the scene action.'
+}
 
 EMOTION:
-${emotion}
+${
+  cleanText(scene?.emotion) ||
+  'Emotion must naturally match the story action.'
+}
 
 CHARACTER CONTINUITY:
 Character ID: ${character.characterId}
@@ -234,41 +98,39 @@ ${style}
 
 PRODUCTION REQUIREMENTS:
 - vertical 9:16 composition
-- cinematic professional framing
-- clear main subject
-- scene-specific visual storytelling
-- visible action must match the narration
-- natural realistic movement
+- cinematic framing
+- realistic natural movement
 - physically believable motion
-- consistent character identity
+- consistent character appearance
 - consistent clothing
-- consistent age and appearance
 - consistent environment
-- natural lighting
-- smooth camera movement
-- meaningful scene progression
+- scene action must clearly match the narration
+- visual must clearly communicate the scene mission
 - no random unrelated objects
-- no unexplained location changes
+- no sudden location changes
 - no unexplained character changes
-- strong emotional clarity
-- professional YouTube Shorts visual quality
+- smooth camera movement
+- natural lighting
+- clear subject
+- strong visual storytelling
+- professional cinematic composition
 
 NEGATIVE CONSTRAINTS:
-- no deformed anatomy
-- no extra fingers
-- no duplicated people
-- no distorted faces
-- no unnatural body movement
-- no flickering
-- no frozen character
-- no random text
-- no watermark
-- no logo
-- no copyrighted characters
-- no unrelated action
-- no gore
-- no horror
-`.trim();
+no deformed anatomy
+no extra fingers
+no duplicated people
+no distorted faces
+no unnatural body movement
+no flickering
+no frozen character
+no random text
+no watermark
+no logo
+no horror
+no gore
+no copyrighted characters
+no unrelated action
+`;
 }
 
 export function buildScenePromptPack(
@@ -284,12 +146,6 @@ export function buildScenePromptPack(
 
   return scenes.map(
     (scene, index) => {
-      const sceneNumber =
-        getSceneNumber(
-          scene,
-          index + 1
-        );
-
       const visualPrompt =
         buildVisualPrompt(
           scene,
@@ -298,16 +154,18 @@ export function buildScenePromptPack(
         );
 
       return {
-        sceneNumber,
+        sceneNumber:
+          scene?.sceneNumber ??
+          index + 1,
 
         role:
-          getSceneRole(scene),
+          scene?.role || '',
 
         duration:
-          scene.duration,
+          scene?.duration || 5,
 
         narration:
-          getSceneNarration(scene),
+          scene?.narration || '',
 
         visualPrompt,
 
