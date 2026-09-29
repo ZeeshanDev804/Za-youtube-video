@@ -19,7 +19,13 @@ function cleanArray(value) {
 }
 
 function getWords(text) {
-  return clean(text)
+  const cleaned = clean(text);
+
+  if (!cleaned) {
+    return [];
+  }
+
+  return cleaned
     .split(/\s+/)
     .filter(Boolean);
 }
@@ -31,8 +37,13 @@ function estimateDuration(text) {
     return 0;
   }
 
-  return Math.round(
+  const duration = Math.round(
     (words / 145) * 60
+  );
+
+  return Math.max(
+    30,
+    Math.min(59, duration)
   );
 }
 
@@ -48,7 +59,7 @@ function detectGenre(topic, creativeBrief = {}) {
     .toLowerCase();
 
   if (
-    /funny|comedy|funny story|joke/.test(text)
+    /funny|comedy|joke/.test(text)
   ) {
     return "comedy";
   }
@@ -87,7 +98,6 @@ function detectGenre(topic, creativeBrief = {}) {
 }
 
 function createDefaultCharacter({
-  topic,
   genre
 }) {
   if (genre === "baby-story") {
@@ -95,12 +105,18 @@ function createDefaultCharacter({
       name: "Leo",
       age: "1 year old",
       gender: "male",
-      face: "cute round baby face, soft cheeks, bright expressive eyes",
-      hair: "short soft dark brown hair",
-      clothing: "beige dotted toddler onesie",
-      body: "small natural toddler proportions",
-      personality: "curious, innocent, playful and expressive",
-      environment: "modern warm minimalist family home",
+      face:
+        "cute round baby face, soft cheeks, bright expressive eyes",
+      hair:
+        "short soft dark brown hair",
+      clothing:
+        "beige dotted toddler onesie",
+      body:
+        "small natural toddler proportions",
+      personality:
+        "curious, innocent, playful and expressive",
+      environment:
+        "modern warm minimalist family home",
       importantObjects: [
         "small toddler toy",
         "soft blanket"
@@ -115,12 +131,18 @@ function createDefaultCharacter({
       name: "Buddy",
       age: "young adult dog",
       gender: "male",
-      face: "friendly expressive face with warm intelligent eyes",
-      hair: "short golden-brown fur",
-      clothing: "natural fur, simple red collar",
-      body: "healthy medium-sized dog",
-      personality: "loyal, brave, emotional and curious",
-      environment: "cinematic natural outdoor environment",
+      face:
+        "friendly expressive face with warm intelligent eyes",
+      hair:
+        "short golden-brown fur",
+      clothing:
+        "natural fur, simple red collar",
+      body:
+        "healthy medium-sized dog",
+      personality:
+        "loyal, brave, emotional and curious",
+      environment:
+        "cinematic natural outdoor environment",
       importantObjects: [
         "red collar"
       ],
@@ -133,10 +155,14 @@ function createDefaultCharacter({
     name: "Alex",
     age: "young adult",
     gender: "unspecified",
-    face: "natural expressive face, confident eyes",
-    hair: "short neat dark hair",
-    clothing: "simple modern casual clothing",
-    body: "natural realistic human proportions",
+    face:
+      "natural expressive face, confident eyes",
+    hair:
+      "short neat dark hair",
+    clothing:
+      "simple modern casual clothing",
+    body:
+      "natural realistic human proportions",
     personality:
       "determined, thoughtful, resilient and relatable",
     environment:
@@ -149,15 +175,14 @@ function createDefaultCharacter({
 
 function buildMission(topic, genre) {
   const subject =
-    clean(topic) ||
-    "never give up";
+    clean(topic) || "never give up";
 
   const missions = {
     comedy:
       `Create a funny and memorable story around ${subject} with a clear comedic payoff.`,
 
     "baby-story":
-      `Create a wholesome, visually clear story around ${subject} with a cute emotional payoff.`,
+      `Create a wholesome and visually clear story around ${subject} with a cute emotional payoff.`,
 
     animal:
       `Create an emotional and visually clear story around ${subject} showing loyalty, courage or kindness.`,
@@ -186,8 +211,7 @@ function buildNarration({
   genre,
   userScript
 }) {
-  const supplied =
-    clean(userScript);
+  const supplied = clean(userScript);
 
   if (supplied) {
     return supplied;
@@ -199,25 +223,25 @@ function buildNarration({
 
   const scripts = {
     motivation:
-      `Everyone sees the result, but almost nobody sees the struggle behind it. When ${subject} becomes difficult, most people stop. But progress does not require perfection. It requires one more step, one more attempt, and one more decision to keep moving. The moment you refuse to quit is often the moment your story begins to change. Keep going, even when the result is not visible yet.`,
+      `Everyone sees the result, but almost nobody sees the struggle behind it. When ${subject} becomes difficult, most people stop because progress feels too slow. But success is rarely built in one perfect moment. It is built through one more step, one more attempt, and one more decision to keep moving. There will be days when nothing seems to change. Keep going anyway. The moment you refuse to quit can become the moment your story begins to change. Your next step may be small, but it can still move you forward.`,
 
     "baby-story":
-      `Sometimes the smallest moments become the biggest memories. A curious little baby discovers something unexpected at home. First comes curiosity, then a tiny adventure, and finally a peaceful little reward. The journey may look simple, but every step brings a new surprise. And sometimes happiness is nothing more than discovering something new and smiling about it.`,
+      `Sometimes the smallest moments become the biggest memories. A curious little baby discovers something unexpected at home and decides to investigate. First comes curiosity, then a tiny adventure, and finally a peaceful little reward. Along the way, every small movement creates a new surprise. The journey may look simple to an adult, but to a baby, every corner feels like a new world. And sometimes happiness is nothing more than discovering something new, feeling safe, and sharing one beautiful little smile.`,
 
     animal:
-      `Sometimes courage appears in the most unexpected place. When someone needs help, a loyal friend does not stop to think about how difficult the journey will be. One small decision can change everything. In the end, the real hero is not the strongest one. It is the one who chooses to care.`,
+      `Sometimes courage appears in the most unexpected place. When someone needs help, a loyal friend does not stop to think about how difficult the journey will be. One small decision can change everything. The path becomes harder, but the friend keeps moving forward because someone is depending on him. In the end, the real hero is not always the strongest one. It is the one who chooses to care, takes action when it matters, and refuses to leave someone behind.`,
 
     comedy:
-      `It started like a completely normal day. Then one tiny mistake changed everything. What looked like a simple plan quickly became a ridiculous chain of events. Everyone tried to fix it, but every solution somehow made the situation even funnier. And just when everything seemed completely lost, the simplest answer was right in front of them.`,
+      `It started like a completely normal day. Then one tiny mistake changed everything. What looked like a simple plan quickly became a ridiculous chain of events. Everyone tried to fix the problem, but every solution somehow made the situation even funnier. The more they tried to control the situation, the more unexpected things happened. Just when everything seemed completely lost, they finally discovered that the simplest answer had been right in front of them the entire time. Sometimes the best plan is simply to stop making it worse.`,
 
     business:
-      `Most people think success begins with a big opportunity. In reality, it often begins with one small decision. When ${subject} creates a difficult choice, the smart move is not always the fastest one. Look at the numbers, understand the risk, and make the decision that still makes sense tomorrow. Small smart decisions can become big results over time.`,
+      `Most people think success begins with a big opportunity. In reality, it often begins with one small decision. When ${subject} creates a difficult choice, the smart move is not always the fastest one. First, understand the numbers. Then identify the real risk and decide what still makes sense tomorrow. A good opportunity can disappear, but a bad decision can stay with you for a long time. Small smart decisions, repeated consistently, can become bigger results over time. The goal is not to move fast blindly. The goal is to move forward intelligently.`,
 
     fantasy:
-      `The journey began with one impossible discovery. A mysterious path appeared where nobody expected it, leading toward something that could change everything. The journey was dangerous, but turning back was no longer an option. Each step revealed another clue until the final discovery made the entire journey worth it.`,
+      `The journey began with one impossible discovery. A mysterious path appeared where nobody expected it, leading toward something that could change everything. The journey was dangerous, but turning back was no longer an option. Each step revealed another clue, and every clue brought a new challenge. Fear made the journey harder, but curiosity kept the hero moving forward. At the final destination, the discovery revealed why the path had appeared in the first place. The journey was not only about finding the answer. It was about becoming brave enough to face it.`,
 
     emotional:
-      `Some moments are difficult because they matter. When everything feels uncertain, one small act of kindness can become a reason to keep going. People may forget the words we say, but they remember how we made them feel. Sometimes the smallest gesture leaves the biggest mark.`
+      `Some moments are difficult because they matter. When everything feels uncertain, one small act of kindness can become a reason to keep going. A person may forget the exact words we say, but they often remember how we made them feel. Sometimes the smallest gesture arrives at exactly the right moment and gives someone enough hope to continue. Life does not always change through huge events. Sometimes it changes through a quiet decision to care, to listen, or simply to stay when someone needs you most.`
   };
 
   return (
@@ -265,22 +289,6 @@ function buildScenes({
   genre,
   title
 }) {
-  const sceneCount = 6;
-
-  const narrationWords =
-    getWords(narration);
-
-  const totalWords =
-    narrationWords.length;
-
-  const wordsPerScene =
-    Math.max(
-      1,
-      Math.ceil(
-        totalWords / sceneCount
-      )
-    );
-
   const sceneTypes = [
     "HOOK",
     "SETUP",
@@ -289,6 +297,23 @@ function buildScenes({
     "TURNING_POINT",
     "ENDING"
   ];
+
+  const narrationWords =
+    getWords(narration);
+
+  const totalWords =
+    narrationWords.length;
+
+  const sceneCount =
+    sceneTypes.length;
+
+  const wordsPerScene =
+    Math.max(
+      1,
+      Math.ceil(
+        totalWords / sceneCount
+      )
+    );
 
   const scenes = [];
 
@@ -315,14 +340,18 @@ function buildScenes({
         ? 7
         : 6;
 
+    const sceneType =
+      sceneTypes[index];
+
     scenes.push({
-      id: `scene-${index + 1}`,
+      id:
+        `scene-${index + 1}`,
 
       sceneNumber:
         index + 1,
 
       type:
-        sceneTypes[index],
+        sceneType,
 
       duration,
 
@@ -331,7 +360,7 @@ function buildScenes({
 
       purpose:
         getScenePurpose(
-          sceneTypes[index],
+          sceneType,
           genre
         ),
 
@@ -339,8 +368,7 @@ function buildScenes({
         buildSceneVisualPrompt({
           genre,
           title,
-          sceneType:
-            sceneTypes[index]
+          sceneType
         }),
 
       transition:
@@ -514,10 +542,17 @@ export async function generateStory(
       userScript
     });
 
+  const narrationWords =
+    getWords(narration);
+
+  const wordCount =
+    narrationWords.length;
+
+  const durationEstimate =
+    estimateDuration(narration);
+
   const characterBible =
     createDefaultCharacter({
-      topic:
-        cleanTopic,
       genre
     });
 
@@ -528,10 +563,56 @@ export async function generateStory(
       title
     });
 
-  const durationEstimate =
-    estimateDuration(
-      narration
-    );
+  const hook =
+    clean(
+      scenes?.[0]?.narration
+    ) ||
+    narration.slice(0, 120);
+
+  const setup =
+    clean(
+      scenes?.[1]?.narration
+    ) ||
+    narration;
+
+  const conflict =
+    clean(
+      scenes?.[2]?.narration
+    ) ||
+    narration;
+
+  const turningPoint =
+    clean(
+      scenes?.[4]?.narration
+    ) ||
+    narration;
+
+  const resolution =
+    clean(
+      scenes?.[5]?.narration
+    ) ||
+    narration;
+
+  const ending =
+    clean(
+      scenes?.[5]?.narration
+    ) ||
+    narration;
+
+  const lesson =
+    genre === "business"
+      ? "Make smart decisions by understanding risk, numbers and long-term consequences."
+      : genre === "comedy"
+        ? "Sometimes the best solution is to stop making the problem worse."
+        : genre === "baby-story"
+          ? "Small discoveries can create the happiest memories."
+          : genre === "animal"
+            ? "Real courage means caring and acting when someone needs you."
+            : genre === "fantasy"
+              ? "Courage grows when we choose to face the unknown."
+              : genre === "emotional"
+                ? "Small acts of kindness can give someone the strength to continue."
+                : "Keep taking the next step, even when progress is difficult to see.";
 
   return {
     title,
@@ -553,13 +634,28 @@ export async function generateStory(
     targetDuration:
       40,
 
+    estimatedDuration:
+      durationEstimate,
+
     durationEstimate,
+
+    wordCount,
 
     mission,
 
-    hook:
-      scenes?.[0]?.narration ||
-      narration.slice(0, 120),
+    hook,
+
+    setup,
+
+    conflict,
+
+    turningPoint,
+
+    resolution,
+
+    lesson,
+
+    ending,
 
     narration,
 
@@ -590,7 +686,8 @@ export async function generateStory(
       "Avoid random visual changes.",
       "Keep the main message clear.",
       "Use natural English narration.",
-      "Designed for vertical YouTube Shorts."
+      "Designed for vertical YouTube Shorts.",
+      "Target duration is approximately 30 to 45 seconds."
     ]
   };
 }
