@@ -3,11 +3,9 @@ console.log(
 );
 
 const mediaSourceScenes =
-  typeof continuousScenes !== "undefined" &&
   Array.isArray(continuousScenes)
     ? continuousScenes
-    : typeof scenes !== "undefined" &&
-      Array.isArray(scenes)
+    : Array.isArray(scenes)
       ? scenes
       : [];
 
@@ -20,33 +18,29 @@ if (mediaSourceScenes.length === 0) {
 const mediaScenes =
   mediaSourceScenes.map(
     (scene, index) => {
-      const generatedVisualPrompt =
+
+      const existingVisualPrompt =
         scene?.visualPrompt ||
         scene?.visual_prompt ||
         scene?.image_prompt ||
         scene?.imagePrompt ||
         scene?.prompt ||
         (
-          typeof prompts !== "undefined" &&
           Array.isArray(prompts)
             ? prompts[index]
             : ""
         ) ||
         (
-          typeof prompts !== "undefined" &&
           Array.isArray(prompts?.scenes)
             ? prompts.scenes[index]
             : ""
-        ) ||
-        (
-          typeof buildVisualPrompt === "function"
-            ? buildVisualPrompt(
-                scene,
-                typeof story !== "undefined"
-                  ? story
-                  : {}
-              )
-            : ""
+        );
+
+      const generatedVisualPrompt =
+        existingVisualPrompt ||
+        buildVisualPrompt(
+          scene,
+          story
         );
 
       if (!generatedVisualPrompt) {
@@ -92,9 +86,7 @@ if (
 ) {
   throw new Error(
     `[MediaPlanner] ${
-      mediaValidation.reasons.join(
-        " "
-      )
+      mediaValidation.reasons.join(" ")
     }`
   );
 }
