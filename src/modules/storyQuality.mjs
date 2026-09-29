@@ -1,5 +1,7 @@
 function cleanText(value) {
-  return String(value || '').trim();
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function hasText(value) {
@@ -7,24 +9,32 @@ function hasText(value) {
 }
 
 function countWords(text) {
-  return cleanText(text)
+  const cleaned = cleanText(text);
+
+  if (!cleaned) {
+    return 0;
+  }
+
+  return cleaned
     .split(/\s+/)
-    .filter(Boolean).length;
+    .filter(Boolean)
+    .length;
+}
+
+function estimateDurationFromWords(wordCount) {
+  if (!wordCount) {
+    return 0;
+  }
+
+  return Math.round(
+    (wordCount / 145) * 60
+  );
 }
 
 export function evaluateStory(story) {
   const checks = {
     title: hasText(story?.title),
     mission: hasText(story?.mission),
-    hook: hasText(story?.hook),
-    setup: hasText(story?.setup),
-    conflict: hasText(story?.conflict),
-    turningPoint:
-      hasText(story?.turningPoint),
-    resolution:
-      hasText(story?.resolution),
-    lesson: hasText(story?.lesson),
-    ending: hasText(story?.ending),
     narration: hasText(story?.narration)
   };
 
@@ -39,12 +49,22 @@ export function evaluateStory(story) {
   const wordCount =
     countWords(story?.narration);
 
-  const duration =
+  const suppliedDuration =
     Number(story?.estimatedDuration) || 0;
 
+  const calculatedDuration =
+    estimateDurationFromWords(
+      wordCount
+    );
+
+  const estimatedDuration =
+    suppliedDuration > 0
+      ? suppliedDuration
+      : calculatedDuration;
+
   const durationValid =
-    duration >= 30 &&
-    duration <= 59;
+    estimatedDuration >= 30 &&
+    estimatedDuration <= 59;
 
   const narrationValid =
     wordCount >= 70 &&
@@ -60,21 +80,32 @@ export function evaluateStory(story) {
 
   return {
     valid,
+
     score: Math.round(
       (passed / total) * 100
     ),
+
     checks,
+
     wordCount,
-    estimatedDuration: duration,
+
+    estimatedDuration,
+
     durationValid,
+
     narrationValid,
+
+    structureValid,
+
     reasons: [
       ...(!structureValid
         ? ['Story structure is incomplete.']
         : []),
+
       ...(!durationValid
         ? ['Story duration is outside the target range.']
         : []),
+
       ...(!narrationValid
         ? ['Narration length is outside the target range.']
         : [])
@@ -97,7 +128,11 @@ export function assertStoryQuality(story) {
   return result;
 }
 
+export const checkStoryQuality =
+  assertStoryQuality;
+
 export default {
   evaluateStory,
-  assertStoryQuality
+  assertStoryQuality,
+  checkStoryQuality
 };
