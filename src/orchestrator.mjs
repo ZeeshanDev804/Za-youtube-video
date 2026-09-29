@@ -11,7 +11,9 @@ const mediaSourceScenes =
       ? scenes
       : [];
 
-if (mediaSourceScenes.length === 0) {
+if (
+  mediaSourceScenes.length === 0
+) {
   throw new Error(
     '[MediaPlanner] No scenes are available for media planning.'
   );
@@ -39,50 +41,25 @@ const mediaScenes =
             : ''
         );
 
-      const generatedVisualPrompt =
-        existingVisualPrompt ||
-        (
-          typeof buildVisualPrompt === 'function'
-            ? buildVisualPrompt(
-                scene,
-                typeof story !== 'undefined'
-                  ? story
-                  : {}
-              )
-            : `
-Create a professional cinematic vertical YouTube Shorts scene.
+      let generatedVisualPrompt =
+        existingVisualPrompt;
 
-Story scene:
-${index + 1}
+      if (
+        !generatedVisualPrompt &&
+        typeof buildVisualPrompt === 'function'
+      ) {
+        generatedVisualPrompt =
+          buildVisualPrompt(
+            scene,
+            typeof story !== 'undefined'
+              ? story
+              : {}
+          );
+      }
 
-Role:
-${scene?.role || 'Story scene'}
-
-Action:
-${
-  scene?.narration ||
-  scene?.action ||
-  scene?.description ||
-  'Show the story action clearly and naturally.'
-}
-
-Requirements:
-- vertical 9:16
-- cinematic composition
-- clear subject
-- natural movement
-- consistent character
-- consistent environment
-- strong visual storytelling
-- realistic lighting
-- no random unrelated objects
-- no copyrighted characters
-- no watermark
-- no logo
-`
-        );
-
-      if (!generatedVisualPrompt) {
+      if (
+        !generatedVisualPrompt
+      ) {
         throw new Error(
           `[MediaPlanner] Scene ${index + 1} could not generate a visual prompt.`
         );
