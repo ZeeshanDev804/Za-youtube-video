@@ -3,11 +3,9 @@ console.log(
 );
 
 const mediaSourceScenes =
-  typeof continuousScenes !== 'undefined' &&
   Array.isArray(continuousScenes)
     ? continuousScenes
-    : typeof scenes !== 'undefined' &&
-      Array.isArray(scenes)
+    : Array.isArray(scenes)
       ? scenes
       : [];
 
@@ -15,7 +13,7 @@ if (
   mediaSourceScenes.length === 0
 ) {
   throw new Error(
-    '[MediaPlanner] No scenes are available for media planning.'
+    "[MediaPlanner] No scenes are available for media planning."
   );
 }
 
@@ -29,39 +27,30 @@ const mediaScenes =
         scene?.imagePrompt ||
         scene?.prompt ||
         (
-          typeof prompts !== 'undefined' &&
           Array.isArray(prompts)
             ? prompts[index]
-            : ''
+            : ""
         ) ||
         (
-          typeof prompts !== 'undefined' &&
           Array.isArray(prompts?.scenes)
             ? prompts.scenes[index]
-            : ''
+            : ""
         );
 
-      let generatedVisualPrompt =
-        existingVisualPrompt;
-
-      if (
-        !generatedVisualPrompt &&
-        typeof buildVisualPrompt === 'function'
-      ) {
-        generatedVisualPrompt =
-          buildVisualPrompt(
-            scene,
-            typeof story !== 'undefined'
-              ? story
-              : {}
-          );
-      }
+      const generatedVisualPrompt =
+        existingVisualPrompt ||
+        buildVisualPrompt(
+          scene,
+          story
+        );
 
       if (
         !generatedVisualPrompt
       ) {
         throw new Error(
-          `[MediaPlanner] Scene ${index + 1} could not generate a visual prompt.`
+          `[MediaPlanner] Scene ${
+            index + 1
+          } could not generate a visual prompt.`
         );
       }
 
