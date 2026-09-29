@@ -4,21 +4,42 @@ console.log(
 
 const mediaScenes =
   continuousScenes.map(
-    (scene, index) => ({
-      ...scene,
-
-      visualPrompt:
+    (scene, index) => {
+      const generatedVisualPrompt =
         scene?.visualPrompt ||
         scene?.visual_prompt ||
         scene?.image_prompt ||
+        scene?.imagePrompt ||
         scene?.prompt ||
         prompts?.[index] ||
         prompts?.scenes?.[index] ||
         buildVisualPrompt(
           scene,
-          characterBible
-        )
-    })
+          story
+        );
+
+      if (!generatedVisualPrompt) {
+        throw new Error(
+          `[MediaPlanner] Scene ${index + 1} could not generate a visual prompt.`
+        );
+      }
+
+      return {
+        ...scene,
+
+        visualPrompt:
+          generatedVisualPrompt,
+
+        visual_prompt:
+          generatedVisualPrompt,
+
+        image_prompt:
+          generatedVisualPrompt,
+
+        prompt:
+          generatedVisualPrompt
+      };
+    }
   );
 
 const mediaPlan =
