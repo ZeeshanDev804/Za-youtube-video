@@ -2,8 +2,15 @@ console.log(
   "[9/20] Media planner..."
 );
 
+const mediaSourceScenes =
+  Array.isArray(continuousScenes)
+    ? continuousScenes
+    : Array.isArray(scenes)
+      ? scenes
+      : [];
+
 const mediaScenes =
-  continuousScenes.map(
+  mediaSourceScenes.map(
     (scene, index) => {
       const generatedVisualPrompt =
         scene?.visualPrompt ||
@@ -41,6 +48,12 @@ const mediaScenes =
       };
     }
   );
+
+if (mediaScenes.length === 0) {
+  throw new Error(
+    '[MediaPlanner] No scenes are available for media planning.'
+  );
+}
 
 const mediaPlan =
   buildMediaPlan(
