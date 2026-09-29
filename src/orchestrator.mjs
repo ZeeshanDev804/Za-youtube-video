@@ -110,8 +110,11 @@ import {
   validatePublishPackage
 } from "./modules/publishMetadata.mjs";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename =
+  fileURLToPath(import.meta.url);
+
+const __dirname =
+  path.dirname(__filename);
 
 const OUTPUT_DIR =
   process.env.OUTPUT_DIR ||
@@ -325,17 +328,6 @@ async function runOneVideo({
     "[4/20] Story quality..."
   );
 
-  /*
-   * IMPORTANT:
-   * Pass the actual story object
-   * directly to StoryQuality.
-   *
-   * Do NOT run:
-   * evaluateStory(story)
-   * and then pass that result
-   * into assertStoryQuality().
-   */
-
   const storyQuality =
     assertStoryQuality(
       story
@@ -439,17 +431,43 @@ async function runOneVideo({
     "[9/20] Media planner..."
   );
 
-  const mediaPlan =
-    buildMediaPlan({
-      project,
-      scenes:
-        continuousScenes,
-      prompts,
-      characterBible
-    });
+  /*
+   * FIX:
+   *
+   * mediaPlanner.mjs expects:
+   *
+   * buildMediaPlan(scenes)
+   *
+   * It does NOT expect an object containing
+   * project, scenes, prompts and characterBible.
+   *
+   * Therefore pass the actual scene array directly.
+   */
 
-  validateMediaPlan(
-    mediaPlan
+  const mediaPlan =
+    buildMediaPlan(
+      continuousScenes
+    );
+
+  const mediaValidation =
+    validateMediaPlan(
+      mediaPlan
+    );
+
+  if (
+    mediaValidation.valid === false
+  ) {
+    throw new Error(
+      `[MediaPlanner] ${
+        mediaValidation.reasons.join(
+          " "
+        )
+      }`
+    );
+  }
+
+  console.log(
+    `Media plan scenes: ${mediaPlan.length}`
   );
 
   console.log(
@@ -480,6 +498,7 @@ async function runOneVideo({
     const prompt =
       prompts?.[i] ||
       prompts?.scenes?.[i] ||
+      mediaPlan?.[i]?.visualPrompt ||
       buildVisualPrompt(
         scene,
         characterBible
