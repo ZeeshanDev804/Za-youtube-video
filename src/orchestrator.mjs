@@ -59,7 +59,12 @@ Role:
 ${scene?.role || 'Story scene'}
 
 Action:
-${scene?.narration || scene?.action || scene?.description || 'Show the story action clearly and naturally.'}
+${
+  scene?.narration ||
+  scene?.action ||
+  scene?.description ||
+  'Show the story action clearly and naturally.'
+}
 
 Requirements:
 - vertical 9:16
